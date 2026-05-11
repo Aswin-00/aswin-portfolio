@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASWIN GIRISH — Cloud Engineer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Bebas+Neue&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080C10;
+      /* Base colors */
+      --accent: #00D9F5;
+      --accent-dim: #00A8C0;
+      --accent-glow: rgba(0, 217, 245, 0.08);
+      
+      --bg2: #0D1117;
+      --bg3: #111820;
+      --surface: #141C24;
+      --surface2: #1A2330;
+      --border: #1E2D3D;
+      --border2: #243545;
+      
+      --cyan: #00D9F5;
+      --green: #00F57A;
+      --amber: #F5A200;
+      --red: #F52D2D;
+      
+      --text: #E8F4F8;
+      --text2: #7A9BB5;
+      --text3: #3D5A6E;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+      --display: 'Bebas Neue', sans-serif;
+      
+      --state-transition: color 0.8s ease, border-color 0.8s ease, background-color 0.8s ease;
+      --scroll-progress: 0;
+    }
+
+    body.state-alert {
+      --accent: var(--amber);
+      --accent-dim: #C08000;
+      --accent-glow: rgba(245, 162, 0, 0.08);
+      --cyan: var(--amber);
+    }
+
+    body.state-emergency {
+      --accent: var(--red);
+      --accent-dim: var(--red-dim);
+      --accent-glow: rgba(245, 45, 45, 0.08);
+      --cyan: var(--red);
+    }
+
+    body.state-recovery {
+      --accent: var(--green);
+      --accent-dim: var(--green-dim);
+      --accent-glow: rgba(0, 245, 122, 0.08);
+      --cyan: var(--green);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* SCANLINE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* TOP STATUS BAR */
+    #statusbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 32px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 1000;
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1px;
+      transition: var(--state-transition);
+    }
+
+    .sb-dock {
+      display: flex;
+      gap: 16px;
+      margin-left: 40px;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sb-dock.active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .dock-stat {
+      display: flex;
+      gap: 6px;
+      color: var(--text3);
+    }
+
+    .dock-stat span:last-child {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: var(--display);
+      font-size: 11px;
+    }
+
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sb-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: background 0.5s ease, box-shadow 0.5s ease;
+    }
+
+    .sb-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .sb-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .sb-dot.cyan { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .sb-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+    .sb-right {
+      margin-left: auto;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    #clock {
+      color: var(--text2);
+      letter-spacing: 1px;
+    }
+
+    .sb-kbd {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 10px;
+      color: var(--cyan);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sb-kbd:hover {
+      background: var(--cyan-glow);
+      border-color: var(--cyan);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.4
+      }
+    }
+
+    /* COMMAND PALETTE */
+    #cmd-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 2000;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 120px;
+      backdrop-filter: blur(4px);
+    }
+
+    #cmd-overlay.open {
+      display: flex;
+    }
+
+    #cmd-palette {
+      width: 580px;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--cyan-dim);
+    }
+
+    #cmd-search {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    #cmd-search::placeholder {
+      color: var(--text3);
+    }
+
+    #cmd-search::before {
+      content: '> ';
+      color: var(--cyan);
+    }
+
+    .cmd-prefix {
+      padding: 16px 20px 0;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .cmd-prefix span {
+      color: var(--cyan);
+    }
+
+    #cmd-results {
+      padding: 8px;
+    }
+
+    .cmd-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.1s;
+      color: var(--text2);
+      font-size: 13px;
+    }
+
+    .cmd-item:hover,
+    .cmd-item.active {
+      background: var(--cyan-glow);
+      color: var(--cyan);
+      border-left: 2px solid var(--cyan);
+      padding-left: 10px;
+    }
+
+    .cmd-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    .cmd-label {
+      flex: 1;
+    }
+
+    .cmd-shortcut {
+      font-size: 10px;
+      color: var(--text3);
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+
+    .cmd-footer {
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      gap: 16px;
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .cmd-footer span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* MAIN CONTENT */
+    main {
+      padding-top: 32px;
+      min-height: 100vh;
+    }
+
+    /* HERO SECTION */
+    #hero {
+      min-height: calc(100vh - 32px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .hero-left {
+      padding: 80px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    /* HERO TEXT */
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--cyan);
+    }
+
+    .hero-name {
+      font-family: var(--display);
+      font-size: 96px;
+      line-height: 0.9;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .hero-name .highlight {
+      color: var(--cyan);
+    }
+
+    .hero-role {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text3);
+      letter-spacing: 2px;
+      margin-bottom: 40px;
+    }
+
+    .hero-role span {
+      color: var(--text2);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 0 auto 40px auto;
+      max-width: 480px;
+    }
+
+    .hero-stat {
+      background: var(--bg2);
+      padding: 16px 20px;
+      text-align: center;
+    }
+
+    .hero-stat-val {
+      font-family: var(--display);
+      font-size: 36px;
+      color: var(--cyan);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .hero-stat-label {
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--cyan);
+      color: #000;
+      border: none;
+      padding: 10px 24px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary:hover {
+      background: #fff;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border2);
+      padding: 10px 24px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* SECTION COMMON */
+    section {
+      padding: 80px 80px;
+      border-top: 1px solid var(--border);
+      position: relative;
+      background: transparent;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .section-tag {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text3);
+      padding: 4px 10px;
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      background: var(--surface);
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 48px;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: 1px;
+    }
+
+    .section-title span {
+      color: var(--cyan);
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* CLUSTER VIEW — SKILLS */
+    #cluster {
+      background: transparent;
+    }
+
+    .cluster-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .cluster-group {
+      background: var(--bg2);
+      padding: 24px;
+    }
+
+    .cluster-group-title {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .service-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: default;
+      transition: all 0.15s;
+    }
+
+    .service-row:hover {
+      padding-left: 4px;
+    }
+
+    .service-status {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-healthy {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 3s infinite;
+    }
+
+    .status-active {
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+      animation: pulse 2s infinite 0.5s;
+    }
+
+    .status-learning {
+      background: var(--amber);
+    }
+
+    .status-idle {
+      background: var(--text3);
+    }
+
+    .service-name {
+      font-size: 12px;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .service-tag {
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      letter-spacing: 1px;
+    }
+
+    .tag-prod {
+      background: rgba(0, 245, 122, 0.1);
+      color: var(--green);
+      border: 1px solid rgba(0, 245, 122, 0.2);
+    }
+
+    .tag-active {
+      background: rgba(0, 217, 245, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 217, 245, 0.2);
+    }
+
+    .tag-learning {
+      background: rgba(245, 162, 0, 0.1);
+      color: var(--amber);
+      border: 1px solid rgba(245, 162, 0, 0.2);
+    }
+
+    .tag-cert {
+      background: rgba(245, 162, 0, 0.15);
+      color: var(--amber);
+      border: 1px solid rgba(245, 162, 0, 0.3);
+    }
+
+    /* INFRA MAP */
+    .infra-overview {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .infra-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .infra-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--cyan);
+    }
+
+    .infra-card-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+
+    .infra-metric {
+      font-family: var(--display);
+      font-size: 40px;
+      color: var(--cyan);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .infra-sub {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* TIMELINE / EXPERIENCE */
+    #experience {
+      background: transparent;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 32px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--cyan), var(--border), transparent);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 48px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -36px;
+      top: 6px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    .timeline-item.current::before {
+      animation: pulse 1.5s infinite;
+    }
+
+    .job-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .job-title {
+      font-family: var(--display);
+      font-size: 24px;
+      color: var(--text);
+    }
+
+    .job-company {
+      font-size: 12px;
+      color: var(--cyan);
+    }
+
+    .job-period {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text3);
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--surface);
+    }
+
+    .job-period.active {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .job-desc {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.8;
+      margin-bottom: 16px;
+      max-width: 640px;
+    }
+
+    .job-highlights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .highlight-chip {
+      font-size: 10px;
+      padding: 4px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      color: var(--text2);
+    }
+
+    .achievement-chip {
+      font-size: 10px;
+      padding: 4px 10px;
+      background: rgba(0, 245, 122, 0.05);
+      border: 1px solid rgba(0, 245, 122, 0.15);
+      border-radius: 2px;
+      color: var(--green);
+    }
+
+    /* INCIDENTS — PROJECT STORIES */
+    #incidents {
+      background: transparent;
+    }
+
+    .incidents-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .incident-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+      cursor: default;
+    }
+
+    .incident-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-2px);
+    }
+
+    .incident-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+    }
+
+    .incident-card.resolved::before {
+      background: var(--green);
+    }
+
+    .incident-card.active::before {
+      background: var(--amber);
+    }
+
+    .incident-card.impact::before {
+      background: var(--cyan);
+    }
+
+    .inc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .inc-id {
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 1px;
+    }
+
+    .inc-sev {
+      font-size: 9px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      letter-spacing: 1px;
+      margin-left: auto;
+    }
+
+    .sev-p0 {
+      background: rgba(245, 45, 45, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(245, 45, 45, 0.3);
+    }
+
+    .sev-p1 {
+      background: rgba(245, 162, 0, 0.1);
+      color: var(--amber);
+      border: 1px solid rgba(245, 162, 0, 0.2);
+    }
+
+    .sev-impact {
+      background: rgba(0, 217, 245, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 217, 245, 0.2);
+    }
+
+    .inc-title {
+      font-family: var(--display);
+      font-size: 20px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .inc-desc {
+      font-size: 11px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .inc-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .inc-tag {
+      font-size: 9px;
+      padding: 2px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text3);
+    }
+
+    .inc-resolution {
+      font-size: 10px;
+      color: var(--green);
+      margin-top: 10px;
+    }
+
+    .inc-resolution::before {
+      content: '✓ ';
+    }
+
+    /* OBSERVABILITY / ABOUT */
+    #observability {
+      background: var(--bg);
+    }
+
+    .obs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    .obs-left {}
+
+    .obs-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .obs-bio {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 2;
+      margin-bottom: 32px;
+    }
+
+    .obs-bio strong {
+      color: var(--cyan);
+      font-weight: 400;
+    }
+
+    .metric-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1px;
+      flex: 0 0 160px;
+    }
+
+    .metric-bar-wrap {
+      flex: 1;
+      background: var(--surface);
+      border-radius: 2px;
+      height: 4px;
+      overflow: hidden;
+    }
+
+    .metric-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .bar-cyan {
+      background: linear-gradient(to right, var(--cyan-dim), var(--cyan));
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .bar-green {
+      background: linear-gradient(to right, var(--green-dim), var(--green));
+    }
+
+    .bar-amber {
+      background: linear-gradient(to right, #c07a00, var(--amber));
+    }
+
+    .metric-val {
+      font-size: 11px;
+      color: var(--text2);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* CERTIFICATIONS */
+    .cert-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cert-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0, 217, 245, 0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cert-badge {
+      width: 48px;
+      height: 48px;
+      border: 2px solid var(--cyan);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--display);
+      font-size: 20px;
+      color: var(--cyan);
+      background: var(--cyan-glow);
+      flex-shrink: 0;
+    }
+
+    .cert-info {}
+
+    .cert-name {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .cert-sub {
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1px;
+    }
+
+    .cert-year {
+      margin-left: auto;
+      font-family: var(--display);
+      font-size: 32px;
+      color: var(--border2);
+    }
+
+    /* CONTACT / FOOTER */
+    #contact {
+      background: transparent;
+      border-top: 1px solid var(--border);
+      padding: 80px;
+      display: flex;
+      gap: 80px;
+      align-items: flex-start;
+    }
+
+    .contact-left {
+      flex: 1;
+    }
+
+    .contact-title {
+      font-family: var(--display);
+      font-size: 56px;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .contact-sub {
+      font-size: 12px;
+      color: var(--text3);
+      max-width: 360px;
+      line-height: 1.8;
+    }
+
+    .contact-right {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      text-decoration: none;
+      color: var(--text2);
+      font-size: 12px;
+      transition: all 0.2s;
+      min-width: 280px;
+    }
+
+    .contact-link:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .contact-link-icon {
+      font-size: 14px;
+      color: var(--text3);
+    }
+
+    .contact-link:hover .contact-link-icon {
+      color: var(--cyan);
+    }
+
+    .footer-bar {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 20px 80px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .footer-bar span {
+      color: var(--text3);
+    }
+
+    .footer-bar .sep {
+      color: var(--border2);
+    }
+
+    .uptime {
+      color: var(--green);
+      margin-left: auto;
+    }
+
+    /* MINI CHART */
+    .mini-chart {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 32px;
+      margin-top: 8px;
+    }
+
+    .mini-bar {
+      flex: 1;
+      background: var(--cyan);
+      opacity: 0.3;
+      border-radius: 1px;
+      transition: opacity 0.2s;
+    }
+
+    .mini-bar:hover {
+      opacity: 1;
+    }
+
+    .mini-bar.peak {
+      opacity: 0.7;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--cyan-dim);
+    }
+
+    /* NAV SIDEBAR */
+    #sidenav {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border2);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .nav-dot:hover,
+    .nav-dot.active {
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .nav-dot::before {
+      content: attr(data-label);
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .nav-dot:hover::before {
+      opacity: 1;
+    }
+
+    /* PROGRESSIVE ACTIVATION (BOOT SEQUENCE) */
+    section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    section.booted {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    section .section-header, section .cluster-grid, section .timeline, section .incident-card, section .infra-card {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    section.booted .section-header { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+    section.booted .cluster-grid, section.booted .timeline { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
+    section.booted .incident-card, section.booted .infra-card { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+
+    /* GLOBAL ACCENT SYNC */
+    .highlight, .btn-primary, .btn-primary:hover, .nav-dot.active, .sb-kbd, .sb-kbd:hover, .btn-ghost:hover, .hero-stat-val, .dock-stat span:last-child {
+      color: var(--accent) !important;
+    }
+    
+    .btn-primary { background: var(--accent-glow); border-color: var(--accent); }
+    .nav-dot.active { background: var(--accent); }
+
+    .bg-grid {
+      position: fixed;
+      top: -10vh;
+      left: -5vw;
+      width: 110vw;
+      height: 120vh;
+      display: flex;
+      opacity: 0.07;
+      pointer-events: none;
+      z-index: -1;
+      will-change: transform;
+      transition: filter 1s ease;
+    }
+
+    .bg-img-panel {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      border-right: 1px solid rgba(0, 217, 245, 0.1);
+    }
+
+    .bg-img-panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%) brightness(0.6) contrast(1.1);
+      transition: filter 1s ease;
+    }
+    
+    body.state-alert .bg-img-panel img { filter: grayscale(50%) brightness(0.4) sepia(0.3); }
+    body.state-emergency .bg-img-panel img { filter: grayscale(0%) brightness(0.3) saturate(1.5); }
+
+    /* TYPING ANIMATION */
+    .typing-text {
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    /* LOADING SCREEN */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9998;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text3);
+      transition: opacity 0.5s;
+    }
+
+    .loader-title {
+      font-family: var(--display);
+      font-size: 40px;
+      color: var(--cyan);
+      letter-spacing: 4px;
+    }
+
+    .loader-bar-wrap {
+      width: 280px;
+      height: 2px;
+      background: var(--surface);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .loader-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--cyan);
+      transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .loader-log {
+      font-size: 10px;
+      color: var(--text3);
+      height: 14px;
+      transition: color 0.3s;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .bg-grid {
+        flex-direction: column;
+        width: 100%;
+        left: 0;
+        transform: none;
+      }
+      
+      .bg-img-panel {
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 217, 245, 0.1);
+      }
+
+      section {
+        padding: 60px 24px;
+      }
+
+      .cluster-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .incidents-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .obs-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #contact {
+        flex-direction: column;
+        padding: 60px 24px;
+        gap: 40px;
+      }
+
+      .hero-left {
+        padding: 40px 24px;
+      }
+
+      .hero-name {
+        font-size: 64px;
+      }
+
+      #sidenav {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div class="loader-title">INITIALIZING</div>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar" id="lbar"></div>
+    </div>
+    <div class="loader-log" id="llog">Booting infrastructure OS...</div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <div class="sb-item">
+      <div class="sb-dot green" id="sb-status-dot"></div>
+      <span id="sb-status-text">SYSTEM OVERVIEW</span>
+    </div>
+    <div class="sb-dock" id="hero-dock">
+      <div class="dock-stat"><span>UPTIME</span> <span>1.5Y</span></div>
+      <div class="dock-stat"><span>GAIN</span> <span>100%</span></div>
+      <div class="dock-stat"><span>CERT</span> <span>SAA</span></div>
+    </div>
+    <div class="sb-right">
+      <div id="clock">--:--:--</div>
+      <div class="sb-kbd" onclick="openCmd()">⌘K</div>
+    </div>
+  </div>
+
+  <!-- SIDE NAV -->
+  <div id="sidenav">
+    <div class="nav-dot active" data-label="HOME" data-target="hero" onclick="scrollTo('hero')"></div>
+    <div class="nav-dot" data-label="SKILLS" data-target="cluster" onclick="scrollTo('cluster')"></div>
+    <div class="nav-dot" data-label="EXPERIENCE" data-target="experience" onclick="scrollTo('experience')"></div>
+    <div class="nav-dot" data-label="INCIDENTS" data-target="incidents" onclick="scrollTo('incidents')"></div>
+    <div class="nav-dot" data-label="PROFILE" data-target="observability" onclick="scrollTo('observability')"></div>
+    <div class="nav-dot" data-label="CONTACT" data-target="contact" onclick="scrollTo('contact')"></div>
+  </div>
+
+  <!-- COMMAND PALETTE -->
+  <div id="cmd-overlay" onclick="closeCmd(event)">
+    <div id="cmd-palette">
+      <div class="cmd-prefix">COMMAND PALETTE <span>// ctrl+k</span></div>
+      <input type="text" id="cmd-search" placeholder="> type a command..." autocomplete="off"
+        oninput="filterCmd(this.value)" onkeydown="cmdKey(event)">
+      <div id="cmd-results">
+        <div class="cmd-item active" data-target="hero" onclick="cmdGo('hero')">
+          <span class="cmd-icon">⌂</span>
+          <span class="cmd-label">open home</span>
+          <span class="cmd-shortcut">H</span>
+        </div>
+        <div class="cmd-item" data-target="cluster" onclick="cmdGo('cluster')">
+          <span class="cmd-icon">◈</span>
+          <span class="cmd-label">inspect infra</span>
+          <span class="cmd-shortcut">I</span>
+        </div>
+        <div class="cmd-item" data-target="experience" onclick="cmdGo('experience')">
+          <span class="cmd-icon">▶</span>
+          <span class="cmd-label">view deployments</span>
+          <span class="cmd-shortcut">D</span>
+        </div>
+        <div class="cmd-item" data-target="incidents" onclick="cmdGo('incidents')">
+          <span class="cmd-icon">⚠</span>
+          <span class="cmd-label">show incidents</span>
+          <span class="cmd-shortcut">P</span>
+        </div>
+        <div class="cmd-item" data-target="observability" onclick="cmdGo('observability')">
+          <span class="cmd-icon">◎</span>
+          <span class="cmd-label">view telemetry</span>
+          <span class="cmd-shortcut">T</span>
+        </div>
+        <div class="cmd-item" data-target="contact" onclick="cmdGo('contact')">
+          <span class="cmd-icon">→</span>
+          <span class="cmd-label">open comms</span>
+          <span class="cmd-shortcut">C</span>
+        </div>
+        <div class="cmd-item" data-action="resume">
+          <span class="cmd-icon">↓</span>
+          <span class="cmd-label">download resume</span>
+          <span class="cmd-shortcut">R</span>
+        </div>
+      </div>
+      <div class="cmd-footer">
+        <span>↑↓ navigate</span>
+        <span>↵ execute</span>
+        <span>ESC close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main>
+
+  <!-- SITE BACKGROUND -->
+  <div class="bg-grid">
+    <div class="bg-img-panel">
+      <img src="ChatGPT Image May 12, 2026, 12_21_44 AM copy.png" alt="">
+    </div>
+    <div class="bg-img-panel">
+      <img src="ChatGPT Image May 11, 2026, 11_36_25 PM.png" alt="">
+    </div>
+    <div class="bg-img-panel">
+      <img src="ChatGPT Image May 12, 2026, 12_34_58 AM.png" alt="">
+    </div>
+  </div>
+  <div class="bg-grid-fade"></div>
+
+    <!-- HERO -->
+    <section id="hero" style="padding:0; border:none; background: transparent;">
+      <div class="hero-left">
+        <div style="position:relative; z-index:1;">
+          <div class="hero-eyebrow">CLOUD ENGINEER — KOCHI, KERALA</div>
+          <div class="hero-name">
+            ASWIN<br><span class="highlight">GIRISH</span>
+          </div>
+          <div class="hero-role">
+            <span>AWS</span> · <span>AZURE</span> · <span>TERRAFORM</span> · <span>DOCKER</span> · <span>PYTHON</span>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="hero-stat-val">1.5</div>
+              <div class="hero-stat-label">YRS UPTIME</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-val">100%</div>
+              <div class="hero-stat-label">AUTOMATION GAIN</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-val">SAA</div>
+              <div class="hero-stat-label">AWS CERTIFIED</div>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <a href="mailto:aswingirish00@gmail.com" class="btn-primary">./connect.sh</a>
+            <a href="https://www.linkedin.com/in/aswingirish/" target="_blank" class="btn-ghost">linkedin --open</a>
+            <button class="btn-ghost" onclick="openCmd()">⌘K palette</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLUSTER VIEW — SKILLS -->
+    <section id="cluster">
+      <div class="section-header">
+        <span class="section-tag">// CLUSTER VIEW</span>
+        <div class="section-title">INFRA <span>STACK</span></div>
+        <div class="section-line"></div>
+      </div>
+      <div class="cluster-grid">
+        <div class="cluster-group">
+          <div class="cluster-group-title">CLOUD // ACTIVE WORKLOADS</div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">aws</div>
+            <div class="service-tag tag-prod">PRODUCTION</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">azure</div>
+            <div class="service-tag tag-active">MONITORED</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">ecs</div>
+            <div class="service-tag tag-prod">RUNNING</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">lambda / serverless</div>
+            <div class="service-tag tag-active">ACTIVE</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">cloudwatch</div>
+            <div class="service-tag tag-prod">OBSERVING</div>
+          </div>
+        </div>
+        <div class="cluster-group">
+          <div class="cluster-group-title">INFRA AS CODE // RUNNING SERVICES</div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">terraform</div>
+            <div class="service-tag tag-prod">PRODUCTION</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">aws cdk</div>
+            <div class="service-tag tag-active">ACTIVE</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">docker</div>
+            <div class="service-tag tag-prod">HEALTHY</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">linux / bash</div>
+            <div class="service-tag tag-prod">HEALTHY</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-learning"></div>
+            <div class="service-name">kubernetes</div>
+            <div class="service-tag tag-learning">LEARNING</div>
+          </div>
+        </div>
+        <div class="cluster-group">
+          <div class="cluster-group-title">AUTOMATION // PIPELINES</div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">python</div>
+            <div class="service-tag tag-prod">SCRIPTING</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">github actions</div>
+            <div class="service-tag tag-active">CI/CD</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-active"></div>
+            <div class="service-name">bitbucket pipelines</div>
+            <div class="service-tag tag-active">CI/CD</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-idle"></div>
+            <div class="service-name">jenkins</div>
+            <div class="service-tag tag-active">CONFIGURED</div>
+          </div>
+          <div class="service-row">
+            <div class="service-status status-healthy"></div>
+            <div class="service-name">aws saa-c03</div>
+            <div class="service-tag tag-cert">CERTIFIED '25</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="infra-overview">
+        <div class="infra-card">
+          <div class="infra-card-title">EFFICIENCY GAIN // REPORTING AUTOMATION</div>
+          <div class="infra-metric">100%</div>
+          <div class="infra-sub">improvement in reporting accuracy via Python automation</div>
+          <div class="mini-chart">
+            <div class="mini-bar" style="height:20%"></div>
+            <div class="mini-bar" style="height:25%"></div>
+            <div class="mini-bar" style="height:30%"></div>
+            <div class="mini-bar" style="height:40%"></div>
+            <div class="mini-bar" style="height:50%"></div>
+            <div class="mini-bar peak" style="height:65%"></div>
+            <div class="mini-bar peak" style="height:80%"></div>
+            <div class="mini-bar peak" style="height:100%"></div>
+          </div>
+        </div>
+        <div class="infra-card">
+          <div class="infra-card-title">TIME SAVED // DAILY MANUAL EFFORT ELIMINATED</div>
+          <div class="infra-metric">1H</div>
+          <div class="infra-sub">daily manual work eliminated via cost comparison automation</div>
+          <div class="mini-chart">
+            <div class="mini-bar peak" style="height:100%"></div>
+            <div class="mini-bar peak" style="height:100%"></div>
+            <div class="mini-bar" style="height:60%"></div>
+            <div class="mini-bar" style="height:30%"></div>
+            <div class="mini-bar" style="height:15%"></div>
+            <div class="mini-bar" style="height:5%"></div>
+            <div class="mini-bar" style="height:2%"></div>
+            <div class="mini-bar" style="height:2%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPERIENCE -->
+    <section id="experience">
+      <div class="section-header">
+        <span class="section-tag">// DEPLOYMENTS</span>
+        <div class="section-title">CAREER <span>TIMELINE</span></div>
+        <div class="section-line"></div>
+      </div>
+      <div class="timeline">
+
+        <div class="timeline-item current">
+          <div class="job-header">
+            <div class="job-title">CLOUD ENGINEER</div>
+            <div class="job-company">Saints and Masters Pvt. Ltd.</div>
+            <div class="job-period active">MAY 2026 – PRESENT</div>
+          </div>
+          <div class="job-desc">
+            Managing cloud infrastructure across AWS and Azure, handling Docker-based application deployments, and
+            maintaining CI/CD pipelines using Bitbucket Pipelines and GitHub Actions. Provisioned infrastructure via
+            Terraform, performed RCA on production incidents, and executed cost optimization tasks.
+          </div>
+          <div class="job-highlights">
+            <span class="highlight-chip">AWS</span>
+            <span class="highlight-chip">Azure</span>
+            <span class="highlight-chip">Docker</span>
+            <span class="highlight-chip">Bitbucket Pipelines</span>
+            <span class="highlight-chip">GitHub Actions</span>
+            <span class="highlight-chip">Terraform</span>
+            <span class="highlight-chip">Vulnerability Mgmt</span>
+            <span class="achievement-chip">↑ Deployment Reliability</span>
+            <span class="achievement-chip">↓ Cloud Spend</span>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="job-header">
+            <div class="job-title">CLOUD ENGINEER</div>
+            <div class="job-company">Nubinix Technologies Pvt Ltd</div>
+            <div class="job-period">MAY 2025 – APR 2026</div>
+          </div>
+          <div class="job-desc">
+            Managed cloud infrastructure on Azure and AWS for Indian startups, ensuring high availability and
+            performance. Configured Linux servers, supported Dockerized applications, developed AWS reporting automation
+            in Python, and delivered Terraform-based IaC solutions for clients.
+          </div>
+          <div class="job-highlights">
+            <span class="highlight-chip">Azure</span>
+            <span class="highlight-chip">AWS</span>
+            <span class="highlight-chip">Python Automation</span>
+            <span class="highlight-chip">Terraform IaC</span>
+            <span class="highlight-chip">Linux Admin</span>
+            <span class="highlight-chip">Docker</span>
+            <span class="achievement-chip">100% Reporting Efficiency ↑</span>
+            <span class="achievement-chip">1H Daily Saved</span>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="job-header">
+            <div class="job-title">CLOUD INTERN</div>
+            <div class="job-company">Nubinix Technologies Pvt Ltd</div>
+            <div class="job-period">NOV 2024 – MAY 2025</div>
+          </div>
+          <div class="job-desc">
+            Handled client communication, incident reporting, and L1-level troubleshooting. Gained hands-on experience
+            with AWS services, contributed to internal documentation, and streamlined troubleshooting workflows.
+          </div>
+          <div class="job-highlights">
+            <span class="highlight-chip">AWS Fundamentals</span>
+            <span class="highlight-chip">Incident Response</span>
+            <span class="highlight-chip">Client Comms</span>
+            <span class="highlight-chip">Documentation</span>
+            <span class="achievement-chip">↑ Client Satisfaction</span>
+            <span class="achievement-chip">↑ Team Efficiency</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- INCIDENTS — PROJECT STORIES -->
+    <section id="incidents">
+      <div class="section-header">
+        <span class="section-tag">// INCIDENT LOG</span>
+        <div class="section-title">NOTABLE <span>EVENTS</span></div>
+        <div class="section-line"></div>
+      </div>
+      <div class="incidents-grid">
+
+        <div class="incident-card resolved">
+          <div class="inc-header">
+            <span class="inc-id">INC-001 // AUTOMATION</span>
+            <span class="inc-sev sev-impact">IMPACT</span>
+          </div>
+          <div class="inc-title">REPORTING ENGINE v1.0</div>
+          <div class="inc-desc">Identified critical inefficiency in AWS cost reporting process — entirely manual,
+            error-prone, consuming engineering hours daily. Designed and deployed an automated Python-based reporting
+            tool that now runs autonomously.</div>
+          <div class="inc-meta">
+            <span class="inc-tag">Python</span>
+            <span class="inc-tag">AWS</span>
+            <span class="inc-tag">Automation</span>
+            <span class="inc-tag">boto3</span>
+          </div>
+          <div class="inc-resolution">100% improvement in efficiency and accuracy</div>
+        </div>
+
+        <div class="incident-card impact">
+          <div class="inc-header">
+            <span class="inc-id">INC-002 // COST OPS</span>
+            <span class="inc-sev sev-p1">P1</span>
+          </div>
+          <div class="inc-title">DAILY COST DELTA AUTOMATION</div>
+          <div class="inc-desc">Daily cloud cost comparisons across client accounts were taking 1+ hour of manual effort
+            every morning. Scripted a Python solution that pulls, compares, and delivers formatted cost reports to
+            clients automatically.</div>
+          <div class="inc-meta">
+            <span class="inc-tag">Python</span>
+            <span class="inc-tag">Cost Optimization</span>
+            <span class="inc-tag">CloudWatch</span>
+            <span class="inc-tag">Scheduling</span>
+          </div>
+          <div class="inc-resolution">1 hour eliminated from daily manual workflow</div>
+        </div>
+
+        <div class="incident-card resolved">
+          <div class="inc-header">
+            <span class="inc-id">INC-003 // PLATFORM</span>
+            <span class="inc-sev sev-impact">SPEAK</span>
+          </div>
+          <div class="inc-title">AWS CDK TALK // KOCHI GROUP</div>
+          <div class="inc-desc">Delivered a technical session on AWS CDK at the AWS Kochi community group — breaking
+            down infrastructure as code concepts, live demos, and real-world patterns from client projects. Community
+            engineering at its finest.</div>
+          <div class="inc-meta">
+            <span class="inc-tag">AWS CDK</span>
+            <span class="inc-tag">Public Speaking</span>
+            <span class="inc-tag">IaC</span>
+            <span class="inc-tag">Community</span>
+          </div>
+          <div class="inc-resolution">AWS Kochi Group — Technical speaker</div>
+        </div>
+
+        <div class="incident-card active">
+          <div class="inc-header">
+            <span class="inc-id">INC-004 // SECURITY</span>
+            <span class="inc-sev sev-p0">P0</span>
+          </div>
+          <div class="inc-title">CONTAINERIZED APP VULN PATCH</div>
+          <div class="inc-desc">Identified and mitigated application vulnerabilities in production containerized
+            environments at current role. Performed security scanning, root cause analysis, and patching with
+            zero-downtime deployment strategy.</div>
+          <div class="inc-meta">
+            <span class="inc-tag">Docker</span>
+            <span class="inc-tag">Security</span>
+            <span class="inc-tag">RCA</span>
+            <span class="inc-tag">Zero-downtime</span>
+          </div>
+          <div class="inc-resolution">Vulnerabilities mitigated — system hardened</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- OBSERVABILITY / ABOUT -->
+    <section id="observability">
+      <div class="section-header">
+        <span class="section-tag">// TELEMETRY</span>
+        <div class="section-title">SYSTEM <span>PROFILE</span></div>
+        <div class="section-line"></div>
+      </div>
+      <div class="obs-grid">
+        <div class="obs-left">
+          <div class="obs-bio">
+            I'm <strong>Aswin Girish</strong> — a Cloud Engineer based in Kochi, Kerala.
+            I don't just spin up infrastructure. I build <strong>systems that hold</strong> under pressure,
+            <strong>automate what shouldn't be manual</strong>, and treat every incident as a
+            story worth learning from.<br><br>
+            Graduated MCA from Marian College, Kuttikkanam. AWS Certified Solutions Architect (SAA-C03, 2025).
+            Presented at the AWS Kochi Group. Represented Nubinix at DMcone 2025.<br><br>
+            Seeking an <strong>AWS Cloud Architect</strong> role where I can scale impact through IaC,
+            cost-optimized design, and automation-first thinking.
+          </div>
+
+          <div class="cert-card">
+            <div class="cert-badge">SAA</div>
+            <div class="cert-info">
+              <div class="cert-name">AWS Certified Solutions Architect – Associate</div>
+              <div class="cert-sub">SAA-C03 · AMAZON WEB SERVICES</div>
+            </div>
+            <div class="cert-year">2025</div>
+          </div>
+        </div>
+
+        <div class="obs-right">
+          <div class="metric-row">
+            <div class="metric-label">AWS PROFICIENCY</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-cyan" style="width:92%" id="m1"></div>
+            </div>
+            <div class="metric-val">92%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">TERRAFORM / IaC</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-cyan" style="width:85%" id="m2"></div>
+            </div>
+            <div class="metric-val">85%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">PYTHON AUTOMATION</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-cyan" style="width:82%" id="m3"></div>
+            </div>
+            <div class="metric-val">82%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">DOCKER / CONTAINERS</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-cyan" style="width:80%" id="m4"></div>
+            </div>
+            <div class="metric-val">80%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">AZURE</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-green" style="width:75%" id="m5"></div>
+            </div>
+            <div class="metric-val">75%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">LINUX ADMIN</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-green" style="width:78%" id="m6"></div>
+            </div>
+            <div class="metric-val">78%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">CI/CD PIPELINES</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-amber" style="width:76%" id="m7"></div>
+            </div>
+            <div class="metric-val">76%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">KUBERNETES</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar bar-amber" style="width:45%" id="m8"></div>
+            </div>
+            <div class="metric-val">45%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <div id="contact">
+      <div class="contact-left">
+        <div class="contact-title">OPEN<br>COMMS</div>
+        <div class="contact-sub">
+          System is online. No queue. Reach out directly — whether it's a role, a collaboration, or a question about
+          cloud architecture.
+          <br><br>
+          <span style="color:var(--cyan); font-family:var(--mono); font-size:11px;">./ping aswin --channel=email</span>
+        </div>
+      </div>
+      <div class="contact-right">
+        <a href="mailto:aswingirish00@gmail.com" class="contact-link">
+          <span class="contact-link-icon">✉</span>
+          aswingirish00@gmail.com
+        </a>
+        <a href="tel:+919909185611" class="contact-link">
+          <span class="contact-link-icon">◎</span>
+          +91 99091 85611
+        </a>
+        <a href="https://www.linkedin.com/in/aswingirish/" target="_blank" class="contact-link">
+          <span class="contact-link-icon">↗</span>
+          linkedin.com/in/aswingirish
+        </a>
+        <a href="#" class="contact-link" style="border-color:var(--border2); color:var(--cyan);">
+          <span class="contact-link-icon" style="color:var(--cyan);">↓</span>
+          download resume
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>ASWIN GIRISH</span>
+      <span class="sep">·</span>
+      <span>CLOUD ENGINEER</span>
+      <span class="sep">·</span>
+      <span>KOCHI, KERALA</span>
+      <span class="sep">·</span>
+      <span>MCA 2025</span>
+      <div class="uptime">● UPTIME: 100%</div>
+    </div>
+
+  </main>
+
+  <script>
+    // OPERATIONAL PLATFORM ENGINE
+    const BOOT_LOGS = [
+      "Booting infrastructure OS...",
+      "Initializing AWS SDK...",
+      "Connecting to clusters...",
+      "Syncing telemetry nodes...",
+      "Stabilizing grid...",
+      "SYSTEM OPERATIONAL"
+    ];
+    let logIndex = 0;
+    const llog = document.getElementById('llog');
+    const lbar = document.getElementById('lbar');
+    const loader = document.getElementById('loader');
+    
+    // 1. BOOT SEQUENCE
+    setTimeout(() => { if(lbar) lbar.style.width = '100%'; }, 100);
+    const logInterval = setInterval(() => {
+      logIndex++;
+      if (logIndex < BOOT_LOGS.length) llog.textContent = BOOT_LOGS[logIndex];
+      if (logIndex >= BOOT_LOGS.length - 1) clearInterval(logInterval);
+    }, 350);
+    
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      setTimeout(() => { 
+        loader.style.display = 'none';
+        initPlatform();
+      }, 500);
+    }, 2200);
+
+    // 2. PLATFORM CONFIGURATION
+    const PLATFORM_STATES = {
+      'hero': { label: 'GLOBAL OVERVIEW', state: 'operational' },
+      'cluster': { label: 'INFRASTRUCTURE LAYER', state: 'operational' },
+      'experience': { label: 'DEPLOYMENT LAYER', state: 'operational' },
+      'incidents': { label: 'INCIDENT RESPONSE', state: 'alert' },
+      'observability': { label: 'TELEMETRY LAYER', state: 'operational' },
+      'contact': { label: 'COMMUNICATIONS', state: 'recovery' }
+    };
+
+    let scrollPos = { current: 0, target: 0 };
+    const lerp = (a, b, n) => (1 - n) * a + n * b;
+
+    function initPlatform() {
+      const bgGrid = document.querySelector('.bg-grid');
+      const heroDock = document.getElementById('hero-dock');
+      const statusText = document.getElementById('sb-status-text');
+      const statusDot = document.getElementById('sb-status-dot');
+
+      // 3. INERTIAL SCROLL & SPATIAL ENGINE
+      function updateScroll() {
+        scrollPos.target = window.scrollY;
+        scrollPos.current = lerp(scrollPos.current, scrollPos.target, 0.08);
+        
+        // Background Drift - Ultra-Subtle for Focus
+        if (bgGrid) {
+          const drift = scrollPos.current * -0.01; // Further reduced for maximum stability
+          bgGrid.style.transform = `translateY(${drift}px)`; // Removed scale entirely
+        }
+        
+        // Metric Dock Morphing
+        if (heroDock) {
+          scrollPos.current > 300 ? heroDock.classList.add('active') : heroDock.classList.remove('active');
+        }
+
+        requestAnimationFrame(updateScroll);
+      }
+      updateScroll();
+
+      // 4. OPERATIONAL STATE OBSERVER
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            const config = PLATFORM_STATES[id];
+            if (!config) return;
+
+            entry.target.classList.add('booted');
+            document.body.className = `state-${config.state}`;
+            if (statusText) statusText.textContent = config.label;
+            
+            document.querySelectorAll('.nav-dot').forEach(d => {
+              d.classList.toggle('active', d.dataset.target === id);
+            });
+
+            if (statusDot) {
+              const dotClass = config.state === 'alert' ? 'amber' : config.state === 'emergency' ? 'red' : config.state === 'recovery' ? 'green' : 'cyan';
+              statusDot.className = `sb-dot ${dotClass}`;
+            }
+          }
+        });
+      }, { threshold: 0.2 });
+
+      Object.keys(PLATFORM_STATES).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+    }
+
+    // CLOCK ENGINE
+    function updateClock() {
+      const clock = document.getElementById('clock');
+      if (!clock) return;
+      const now = new Date();
+      clock.textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // COMMAND PALETTE ENGINE
+    function openCmd() {
+      const overlay = document.getElementById('cmd-overlay');
+      const search = document.getElementById('cmd-search');
+      if (overlay) overlay.classList.add('open');
+      if (search) setTimeout(() => search.focus(), 50);
+    }
+    function closeCmd(e) {
+      const overlay = document.getElementById('cmd-overlay');
+      const search = document.getElementById('cmd-search');
+      if (e.target === overlay) {
+        overlay.classList.remove('open');
+        if (search) { search.value = ''; filterCmd(''); }
+      }
+    }
+    function cmdGo(target) {
+      const overlay = document.getElementById('cmd-overlay');
+      const search = document.getElementById('cmd-search');
+      if (overlay) overlay.classList.remove('open');
+      if (search) { search.value = ''; filterCmd(''); }
+      scrollToSection(target);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const overlay = document.getElementById('cmd-overlay');
+        if (!overlay) return;
+        overlay.classList.contains('open') ? overlay.classList.remove('open') : openCmd();
+      }
+      if (e.key === 'Escape') {
+        const overlay = document.getElementById('cmd-overlay');
+        if (overlay) overlay.classList.remove('open');
+      }
+    });
+
+    function filterCmd(val) {
+      const items = document.querySelectorAll('.cmd-item');
+      const q = val.toLowerCase().replace(/^>\s*/, '');
+      items.forEach(item => {
+        const label = item.querySelector('.cmd-label').textContent.toLowerCase();
+        item.style.display = (!q || label.includes(q)) ? '' : 'none';
+      });
+    }
+
+    function cmdKey(e) {
+      const items = [...document.querySelectorAll('.cmd-item')].filter(i => i.style.display !== 'none');
+      if (!items.length) return;
+      const activeIdx = items.findIndex(i => i.classList.contains('active'));
+      if (e.key === 'ArrowDown') {
+        items.forEach(i => i.classList.remove('active'));
+        items[(activeIdx + 1) % items.length]?.classList.add('active');
+        e.preventDefault();
+      } else if (e.key === 'ArrowUp') {
+        items.forEach(i => i.classList.remove('active'));
+        items[(activeIdx - 1 + items.length) % items.length]?.classList.add('active');
+        e.preventDefault();
+      } else if (e.key === 'Enter') {
+        const active = document.querySelector('.cmd-item.active');
+        if (active) active.click();
+      }
+    }
+
+    function scrollToSection(id) {
+      const target = document.getElementById(id);
+      if (target) {
+        window.scrollTo({
+          top: target.offsetTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+  </script>
+
+</body>
+
+</html>
