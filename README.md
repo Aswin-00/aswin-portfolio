@@ -4,7 +4,7 @@
 
 ## Live Website
 
-🌐 https://aswingirih.icu
+🌐 https://aswingirish.icu
 
 ---
 
